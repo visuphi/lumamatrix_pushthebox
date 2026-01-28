@@ -6,6 +6,6 @@ The game is still under development.
 
 # Links
 
-[Lumatrix Workshop ZHAW](www.lumatrix.fun) <br>
+[Lumatrix Workshop ZHAW](http://www.lumatrix.fun) <br>
 [Lumatrix Github Repository](https://github.com/InES-HPMM/LED-Matrix-Workshop) <br>
 [Zephyr RTOS Documentation](https://docs.zephyrproject.org/latest/)
