@@ -29,6 +29,7 @@ LOG_MODULE_REGISTER(main);
 
 #define RGB(_r, _g, _b) {.r = (_r), .g = (_g), .b = (_b)}
 
+
 static const struct gpio_dt_spec joystick_up = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw0), gpios, {0});
 static const struct gpio_dt_spec joystick_down = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw1), gpios, {0});
 static const struct gpio_dt_spec joystick_left = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw2), gpios, {0});
@@ -42,7 +43,7 @@ static struct gpio_callback joystick_left_cb_data;
 static struct gpio_callback joystick_right_cb_data;
 static struct gpio_callback joystick_center_cb_data;
 
-/* just for test purpose */
+/* just for test purpose, can be done more efficient */
 struct map maps[] = {
     {
         BORDER_CELL,
@@ -218,6 +219,7 @@ static struct led_rgb pixels[STRIP_NUM_PIXELS];
 static const struct device *const strip = DEVICE_DT_GET(STRIP_NODE);
 size_t color = 0;
 
+/* callbacks which are calle when joystick is used */
 void joystick_up_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	int rc;
@@ -255,6 +257,7 @@ void joystick_center_pressed(const struct device *dev, struct gpio_callback *cb,
 	LOG_INF("joystick center callback");
 }
 
+/* helper to  set up the gpio/joystick input */
 static int setup_button(const struct gpio_dt_spec *btn, struct gpio_callback *cb,
 			gpio_callback_handler_t handler, bool enable_irq)
 {
@@ -279,13 +282,14 @@ static int setup_button(const struct gpio_dt_spec *btn, struct gpio_callback *cb
 			return -1;
 		}
 	}
-
+    /* set callbacks */
 	gpio_init_callback(cb, handler, BIT(btn->pin));
 	gpio_add_callback(btn->port, cb);
 
 	return 0;
 }
 
+/* just for tests: read in border cell map function */
 static int read_map(void) {
 	int rc;
 	size_t maps_len = sizeof(maps) / sizeof(maps[0]);
@@ -301,6 +305,8 @@ static int read_map(void) {
 	}
 	return 0;
 }
+
+/* function to initialise the  hardware */
 static int init_hw(void)
 {
 	if (device_is_ready(strip)) {
