@@ -1,0 +1,3 @@
+[submodule "boards/shields/zhaw_lumamatrix"]
+	path = boards/shields/zhaw_lumamatrix
+	url = git@github.com:visuphi/lumamatrix_zephyr.git
