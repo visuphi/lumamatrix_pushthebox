@@ -30,12 +30,12 @@ LOG_MODULE_REGISTER(main);
 #define RGB(_r, _g, _b) {.r = (_r), .g = (_g), .b = (_b)}
 
 
-static const struct gpio_dt_spec joystick_up = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw0), gpios, {0});
-static const struct gpio_dt_spec joystick_down = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw1), gpios, {0});
-static const struct gpio_dt_spec joystick_left = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw2), gpios, {0});
-static const struct gpio_dt_spec joystick_right = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw3), gpios, {0});
-static const struct gpio_dt_spec joystick_center = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw4), gpios, {0});
-static const struct gpio_dt_spec switcher = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw5), gpios, {0});
+static const struct gpio_dt_spec joystick_up = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
+static const struct gpio_dt_spec joystick_down = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios);
+static const struct gpio_dt_spec joystick_left = GPIO_DT_SPEC_GET(DT_ALIAS(sw2), gpios);
+static const struct gpio_dt_spec joystick_right = GPIO_DT_SPEC_GET(DT_ALIAS(sw3), gpios);
+static const struct gpio_dt_spec joystick_center = GPIO_DT_SPEC_GET(DT_ALIAS(sw4), gpios);
+static const struct gpio_dt_spec switcher = GPIO_DT_SPEC_GET(DT_ALIAS(sw5), gpios);
 
 static struct gpio_callback joystick_up_cb_data;
 static struct gpio_callback joystick_down_cb_data;
@@ -320,15 +320,15 @@ static int init_hw(void)
 		return -1;
 	}
 
-	if (setup_button(&joystick_down, &joystick_down_cb_data, joystick_down_pressed, false)) {
+	if (setup_button(&joystick_down, &joystick_down_cb_data, joystick_down_pressed, true)) {
 		return -1;
 	}
 
-	if (setup_button(&joystick_left, &joystick_left_cb_data, joystick_left_pressed, false)) {
+	if (setup_button(&joystick_left, &joystick_left_cb_data, joystick_left_pressed, true)) {
 		return -1;
 	}
 
-	if (setup_button(&joystick_right, &joystick_right_cb_data, joystick_right_pressed, false)) {
+	if (setup_button(&joystick_right, &joystick_right_cb_data, joystick_right_pressed, true)) {
 		return -1;
 	}
 
