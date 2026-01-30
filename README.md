@@ -1,8 +1,8 @@
-# Luma Matrix Push the Box - Zephyr Version
+# Luma Matrix Push to Win - Zephyr Version
 
-This repository contains the Push the Box game for the Luma Matrix. It is used at the Zephyr Meetup on 12.Februar 2026, in Winterthur as part of the competition to win the sponsored boards.
+This repository contains the Push to Win game for the Luma Matrix. It is used at the Zephyr Meetup on 12.Februar 2026, in Winterthur as part of the competition to win the sponsored boards.
 
-The game is still under development.
+To win, the player must move the purple boxes into the blue target areas.
 
 # Links
 
