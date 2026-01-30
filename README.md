@@ -1,4 +1,4 @@
-# Luma Matrix Push to Win - Zephyr Version
+# Luma Matrix Push to Win Game - Zephyr Version
 
 This repository contains the Push to Win game for the Luma Matrix. It is used at the Zephyr Meetup on 12.Februar 2026, in Winterthur as part of the competition to win the sponsored boards.
 
