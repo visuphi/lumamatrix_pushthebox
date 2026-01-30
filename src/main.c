@@ -3,8 +3,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
- 
-#include <map.h>
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(main);
 
@@ -13,6 +11,9 @@ LOG_MODULE_REGISTER(main);
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/util.h>
+
+#include <map.h>
+#include <buttons.h>
 
 #define STRIP_NODE DT_ALIAS(led_strip)
 
@@ -33,24 +34,12 @@ LOG_MODULE_REGISTER(main);
 #define BOX_ON_TARGET 4
 
 static const struct led_rgb field_colors[] = {
-	RGB(0, 0, 0), /* empty */
+	RGB(0, 0, 0),       /* empty */
 	RGB(100, 100, 100), /* border */
-	RGB(128, 0, 128), /* BOX */
-	RGB(0, 128, 128), /* TARGET */
-	RGB(0, 128, 0), /* BOX_ON_TARGET */
+	RGB(128, 0, 128),   /* BOX */
+	RGB(0, 128, 128),   /* TARGET */
+	RGB(0, 128, 0),     /* BOX_ON_TARGET */
 };
-
-static const struct gpio_dt_spec joystick_up = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
-static const struct gpio_dt_spec joystick_down = GPIO_DT_SPEC_GET(DT_ALIAS(sw1), gpios);
-static const struct gpio_dt_spec joystick_left = GPIO_DT_SPEC_GET(DT_ALIAS(sw2), gpios);
-static const struct gpio_dt_spec joystick_right = GPIO_DT_SPEC_GET(DT_ALIAS(sw3), gpios);
-static const struct gpio_dt_spec joystick_center = GPIO_DT_SPEC_GET(DT_ALIAS(sw4), gpios);
-
-static struct gpio_callback joystick_up_cb_data;
-static struct gpio_callback joystick_down_cb_data;
-static struct gpio_callback joystick_left_cb_data;
-static struct gpio_callback joystick_right_cb_data;
-static struct gpio_callback joystick_center_cb_data;
 
 uint8_t map[8][8] = {{1, 1, 1, 1, 1, 0, 0, 0}, 
                     {1, 0, 2, 3, 1, 1, 1, 0},
@@ -244,39 +233,7 @@ void joystick_center_pressed(const struct device *dev, struct gpio_callback *cb,
 	LOG_INF("joystick center callback");
 }
 
-/* helper to set up the gpio/joystick input */
-static int setup_button(const struct gpio_dt_spec *btn, struct gpio_callback *cb,
-			gpio_callback_handler_t handler, bool enable_irq)
-{
-	int rc;
-
-	if (!gpio_is_ready_dt(btn)) {
-		printk("Error: button device %s is not ready\n", btn->port->name);
-		return -1;
-	}
-
-	rc = gpio_pin_configure_dt(btn, GPIO_INPUT);
-	if (rc != 0) {
-		printk("Error %d: failed to configure %s pin %d\n", rc, btn->port->name, btn->pin);
-		return -1;
-	}
-
-	if (enable_irq) {
-		rc = gpio_pin_interrupt_configure_dt(btn, GPIO_INT_EDGE_TO_ACTIVE);
-		if (rc != 0) {
-			printk("Error %d: failed to configure interrupt on %s pin %d\n", rc,
-			       btn->port->name, btn->pin);
-			return -1;
-		}
-	}
-	/* set callbacks */
-	gpio_init_callback(cb, handler, BIT(btn->pin));
-	gpio_add_callback(btn->port, cb);
-
-	return 0;
-}
-
-/* function to initialise the hardware */
+/* HARDWARE INIT */
 static int init_hw(void)
 {
 	if (device_is_ready(strip)) {
@@ -286,25 +243,12 @@ static int init_hw(void)
 		return -1;
 	}
 
-	if (setup_button(&joystick_up, &joystick_up_cb_data, joystick_up_pressed, true)) {
-		return -1;
-	}
+	int rc = init_buttons(joystick_up_pressed, joystick_down_pressed, joystick_left_pressed,
+			      joystick_right_pressed, joystick_center_pressed);
 
-	if (setup_button(&joystick_down, &joystick_down_cb_data, joystick_down_pressed, true)) {
-		return -1;
-	}
-
-	if (setup_button(&joystick_left, &joystick_left_cb_data, joystick_left_pressed, true)) {
-		return -1;
-	}
-
-	if (setup_button(&joystick_right, &joystick_right_cb_data, joystick_right_pressed, true)) {
-		return -1;
-	}
-
-	if (setup_button(&joystick_center, &joystick_center_cb_data, joystick_center_pressed,
-			 true)) {
-		return -1;
+	if (rc) {
+		LOG_ERR("failed to init buttons: %d", rc);
+		return rc;
 	}
 
 	return 0;

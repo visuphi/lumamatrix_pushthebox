@@ -12,11 +12,4 @@ struct map {
     struct led_rgb color;
 };
 
-enum name {
-	PLAYER,
-	BORDER_CELL,
-    TARGET_CELL,
-    BOX
-};
-
 int map_pos_to_index(int row, int col);
