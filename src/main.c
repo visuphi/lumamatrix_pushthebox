@@ -3,18 +3,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
-#include <errno.h>
-#include <string.h>
+ 
 #include <map.h>
-#define LOG_LEVEL 4
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(main);
 
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/led_strip.h>
 #include <zephyr/device.h>
-#include <zephyr/drivers/spi.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/util.h>
 
 #define STRIP_NODE DT_ALIAS(led_strip)
@@ -36,12 +33,11 @@ LOG_MODULE_REGISTER(main);
 #define BOX_ON_TARGET 4
 
 static const struct led_rgb field_colors[] = {
-	RGB(0x00, 0x00, 0x00), /* empty */
-	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, CONFIG_SAMPLE_LED_BRIGHTNESS,
-	    CONFIG_SAMPLE_LED_BRIGHTNESS),                                     /* border */
-	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00), /* BOX */
-	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00, CONFIG_SAMPLE_LED_BRIGHTNESS), /* TARGET */
-	RGB(0x00, CONFIG_SAMPLE_LED_BRIGHTNESS, CONFIG_SAMPLE_LED_BRIGHTNESS), /* BOX_ON_TARGET */
+	RGB(0, 0, 0), /* empty */
+	RGB(100, 100, 100), /* border */
+	RGB(128, 0, 128), /* BOX */
+	RGB(0, 128, 128), /* TARGET */
+	RGB(0, 128, 0), /* BOX_ON_TARGET */
 };
 
 static const struct gpio_dt_spec joystick_up = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
@@ -49,7 +45,6 @@ static const struct gpio_dt_spec joystick_down = GPIO_DT_SPEC_GET(DT_ALIAS(sw1),
 static const struct gpio_dt_spec joystick_left = GPIO_DT_SPEC_GET(DT_ALIAS(sw2), gpios);
 static const struct gpio_dt_spec joystick_right = GPIO_DT_SPEC_GET(DT_ALIAS(sw3), gpios);
 static const struct gpio_dt_spec joystick_center = GPIO_DT_SPEC_GET(DT_ALIAS(sw4), gpios);
-static const struct gpio_dt_spec switcher = GPIO_DT_SPEC_GET(DT_ALIAS(sw5), gpios);
 
 static struct gpio_callback joystick_up_cb_data;
 static struct gpio_callback joystick_down_cb_data;
@@ -67,13 +62,11 @@ uint8_t map[8][8] = {{1, 1, 1, 1, 1, 0, 0, 0},
                     {0, 1, 1, 1, 1, 0, 0, 0}};
 
 struct Position start = {.x = 2, .y = 2};
-struct led_rgb player_color = RGB(CONFIG_SAMPLE_LED_BRIGHTNESS / 2, CONFIG_SAMPLE_LED_BRIGHTNESS,
-				  CONFIG_SAMPLE_LED_BRIGHTNESS / 2);
+struct led_rgb player_color = RGB(255, 0, 0);
 
 uint8_t game_state[8][8];
 struct Position player;
 
-int cursor = 0;
 static const struct led_rgb colors[] = {
 	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00, 0x00), /* red */
 	RGB(0x00, CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00), /* green */
@@ -215,7 +208,7 @@ void move_to(struct Position rel_pos)
 	}
 }
 
-/* callbacks which are calle when joystick is used */
+/* callbacks which are called when joystick is used */
 void joystick_up_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	LOG_INF("joystick up callback");
@@ -251,7 +244,7 @@ void joystick_center_pressed(const struct device *dev, struct gpio_callback *cb,
 	LOG_INF("joystick center callback");
 }
 
-/* helper to  set up the gpio/joystick input */
+/* helper to set up the gpio/joystick input */
 static int setup_button(const struct gpio_dt_spec *btn, struct gpio_callback *cb,
 			gpio_callback_handler_t handler, bool enable_irq)
 {
@@ -283,7 +276,7 @@ static int setup_button(const struct gpio_dt_spec *btn, struct gpio_callback *cb
 	return 0;
 }
 
-/* function to initialise the  hardware */
+/* function to initialise the hardware */
 static int init_hw(void)
 {
 	if (device_is_ready(strip)) {
@@ -328,8 +321,13 @@ int main(void)
 	}
 
 	rc = load_map();
+	if (!rc) {
+		LOG_ERR("failed to load map");
+	}
 
 	rc = display_map();
-
+	if (!rc) {
+		LOG_ERR("failed to display map");
+	}
 	return 0;
 }
