@@ -29,17 +29,18 @@ LOG_MODULE_REGISTER(main);
 
 #define RGB(_r, _g, _b) {.r = (_r), .g = (_g), .b = (_b)}
 
-#define NOTHING         0
-#define BORDER          1
-#define BOX             2
-#define TARGET          3
-#define BOX_ON_TARGET   4
+#define NOTHING       0
+#define BORDER        1
+#define BOX           2
+#define TARGET        3
+#define BOX_ON_TARGET 4
 
 static const struct led_rgb field_colors[] = {
 	RGB(0x00, 0x00, 0x00), /* empty */
-	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, CONFIG_SAMPLE_LED_BRIGHTNESS, CONFIG_SAMPLE_LED_BRIGHTNESS), /* border */
+	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, CONFIG_SAMPLE_LED_BRIGHTNESS,
+	    CONFIG_SAMPLE_LED_BRIGHTNESS),                                     /* border */
 	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00), /* BOX */
-	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS,  0x00, CONFIG_SAMPLE_LED_BRIGHTNESS), /* TARGET */
+	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00, CONFIG_SAMPLE_LED_BRIGHTNESS), /* TARGET */
 	RGB(0x00, CONFIG_SAMPLE_LED_BRIGHTNESS, CONFIG_SAMPLE_LED_BRIGHTNESS), /* BOX_ON_TARGET */
 };
 
@@ -56,8 +57,7 @@ static struct gpio_callback joystick_left_cb_data;
 static struct gpio_callback joystick_right_cb_data;
 static struct gpio_callback joystick_center_cb_data;
 
-
-uint8_t map[8][8] = {{1, 1, 1, 1, 1, 0, 0, 0},
+uint8_t map[8][8] = {{1, 1, 1, 1, 1, 0, 0, 0}, 
                     {1, 0, 2, 3, 1, 1, 1, 0},
                     {1, 0, 0, 3, 3, 0, 1, 0},
                     {1, 0, 0, 1, 1, 2, 1, 1},
@@ -67,7 +67,8 @@ uint8_t map[8][8] = {{1, 1, 1, 1, 1, 0, 0, 0},
                     {0, 1, 1, 1, 1, 0, 0, 0}};
 
 struct Position start = {.x = 2, .y = 2};
-struct led_rgb player_color = RGB(CONFIG_SAMPLE_LED_BRIGHTNESS/2, CONFIG_SAMPLE_LED_BRIGHTNESS, CONFIG_SAMPLE_LED_BRIGHTNESS/2);
+struct led_rgb player_color = RGB(CONFIG_SAMPLE_LED_BRIGHTNESS / 2, CONFIG_SAMPLE_LED_BRIGHTNESS,
+				  CONFIG_SAMPLE_LED_BRIGHTNESS / 2);
 
 uint8_t game_state[8][8];
 struct Position player;
@@ -83,22 +84,23 @@ static struct led_rgb pixels[STRIP_NUM_PIXELS];
 
 static const struct device *const strip = DEVICE_DT_GET(STRIP_NODE);
 
-static int display_map(void) {
+static int display_map(void)
+{
 	int rc;
 	size_t map_len_y = sizeof(game_state[0]) / sizeof(game_state[0][0]);
 	size_t map_len_x = sizeof(game_state) / sizeof(game_state[0]);
 	int x, y;
 	int index, element;
-	for (y=0; y < map_len_y; y++) {
-	    for (x=0; x < map_len_x; x++) {
-            index = map_pos_to_index(y,x);
-            element = game_state[y][x];
-            pixels[index] = field_colors[element];
-        }
+	for (y = 0; y < map_len_y; y++) {
+		for (x = 0; x < map_len_x; x++) {
+			index = map_pos_to_index(y, x);
+			element = game_state[y][x];
+			pixels[index] = field_colors[element];
+		}
 	}
 
-    index = map_pos_to_index(player.x,player.y);
-    pixels[index] = player_color;
+	index = map_pos_to_index(player.x, player.y);
+	pixels[index] = player_color;
 
 	rc = led_strip_update_rgb(strip, pixels, STRIP_NUM_PIXELS);
 	if (rc) {
@@ -107,17 +109,18 @@ static int display_map(void) {
 	return 0;
 }
 
-static int display_win(void) {
+static int display_win(void)
+{
 	int rc;
 	size_t map_len_y = sizeof(game_state[0]) / sizeof(game_state[0][0]);
 	size_t map_len_x = sizeof(game_state) / sizeof(game_state[0]);
 	int x, y;
 	int index;
-	for (y=0; y < map_len_y; y++) {
-	    for (x=0; x < map_len_x; x++) {
-            index = map_pos_to_index(y,x);
-            pixels[index] = colors[1];
-        }
+	for (y = 0; y < map_len_y; y++) {
+		for (x = 0; x < map_len_x; x++) {
+			index = map_pos_to_index(y, x);
+			pixels[index] = colors[1];
+		}
 	}
 
 	rc = led_strip_update_rgb(strip, pixels, STRIP_NUM_PIXELS);
@@ -127,123 +130,124 @@ static int display_win(void) {
 	return 0;
 }
 
-static int load_map(void) {
-    memcpy(game_state, map, sizeof(map));
-    player = start;
+static int load_map(void)
+{
+	memcpy(game_state, map, sizeof(map));
+	player = start;
 	return 0;
 }
 
-bool check_success(void) {
+bool check_success(void)
+{
 	size_t map_len_y = sizeof(game_state[0]) / sizeof(game_state[0][0]);
 	size_t map_len_x = sizeof(game_state) / sizeof(game_state[0]);
 	int x, y;
-	for (y=0; y < map_len_y; y++) {
-	    for (x=0; x < map_len_x; x++) {
-            if (game_state[y][x] == BOX) {
-                return false;
-            }
-        }
+	for (y = 0; y < map_len_y; y++) {
+		for (x = 0; x < map_len_x; x++) {
+			if (game_state[y][x] == BOX) {
+				return false;
+			}
+		}
 	}
-    return true;
+	return true;
 }
 
+void move_to(struct Position rel_pos)
+{
+	int new_x = player.x + rel_pos.x;
+	int new_y = player.y + rel_pos.y;
 
-void move_to(struct Position rel_pos) {
-    int new_x = player.x + rel_pos.x;
-    int new_y = player.y + rel_pos.y;
+	switch (game_state[new_x][new_y]) {
+	case BORDER:
+		break;
+	case BOX_ON_TARGET:
+		switch (game_state[new_x + rel_pos.x][new_y + rel_pos.y]) {
+		case BORDER:        // intentional fallthrough
+		case BOX_ON_TARGET: // intentional fallthrough
+		case BOX:
+			break;
+		case NOTHING:
+			game_state[new_x][new_y] = TARGET;
+			game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX;
+			player.x = new_x;
+			player.y = new_y;
+			break;
+		case TARGET:
+			game_state[new_x][new_y] = TARGET;
+			game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX_ON_TARGET;
+			player.x = new_x;
+			player.y = new_y;
+			break;
+		}
+		break;
+	case BOX:
+		switch (game_state[new_x + rel_pos.x][new_y + rel_pos.y]) {
+		case BORDER:        // intentional fallthrough
+		case BOX_ON_TARGET: // intentional fallthrough
+		case BOX:
+			break;
+		case NOTHING:
+			game_state[new_x][new_y] = NOTHING;
+			game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX;
+			player.x = new_x;
+			player.y = new_y;
+			break;
+		case TARGET:
+			game_state[new_x][new_y] = NOTHING;
+			game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX_ON_TARGET;
+			player.x = new_x;
+			player.y = new_y;
+			break;
+		}
+		break;
+	case TARGET: // intentional fallthrough
+	default:     // intentional fallthrough
+	case NOTHING:
+		player.x = new_x;
+		player.y = new_y;
+		break;
+	}
 
-    switch (game_state[new_x][new_y]) {
-        case BORDER:
-            break;
-        case BOX_ON_TARGET:
-            switch (game_state[new_x + rel_pos.x][new_y + rel_pos.y]) {
-                case BORDER: // intentional fallthrough
-                case BOX_ON_TARGET:  // intentional fallthrough
-                case BOX:
-                    break;
-                case NOTHING:
-                    game_state[new_x][new_y] = TARGET;
-                    game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX;
-                    player.x = new_x;
-                    player.y = new_y;
-                    break;
-                case TARGET:
-                    game_state[new_x][new_y] = TARGET;
-                    game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX_ON_TARGET;
-                    player.x = new_x;
-                    player.y = new_y;
-                    break;
-            }
-            break;
-        case BOX:
-            switch (game_state[new_x + rel_pos.x][new_y + rel_pos.y]) {
-                case BORDER: // intentional fallthrough
-                case BOX_ON_TARGET:  // intentional fallthrough
-                case BOX:
-                    break;
-                case NOTHING:
-                    game_state[new_x][new_y] = NOTHING;
-                    game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX;
-                    player.x = new_x;
-                    player.y = new_y;
-                    break;
-                case TARGET:
-                    game_state[new_x][new_y] = NOTHING;
-                    game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX_ON_TARGET;
-                    player.x = new_x;
-                    player.y = new_y;
-                    break;
-            }
-            break;
-        case TARGET: // intentional fallthrough
-        default: // intentional fallthrough
-        case NOTHING:
-            player.x = new_x;
-            player.y = new_y;
-            break;
-    }
-    
-    if (check_success()) {
-        display_win();
-    }
-    else {
-        display_map();
-    }
+	if (check_success()) {
+		display_win();
+	} else {
+		display_map();
+	}
 }
 
 /* callbacks which are calle when joystick is used */
 void joystick_up_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	LOG_INF("joystick up callback");
-    struct Position new_position = {.x = -1, .y = 0};
-    move_to(new_position);
+	struct Position new_position = {.x = -1, .y = 0};
+	move_to(new_position);
 }
 
 void joystick_down_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	LOG_INF("joystick down callback");
-    struct Position new_position = {.x = 1, .y = 0};
-    move_to(new_position);
+	struct Position new_position = {.x = 1, .y = 0};
+	move_to(new_position);
 }
 
 void joystick_left_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	LOG_INF("joystick left callback");
-    struct Position new_position = {.x = 0, .y = -1};
-    move_to(new_position);
+	struct Position new_position = {.x = 0, .y = -1};
+	move_to(new_position);
 }
 
 void joystick_right_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	LOG_INF("joystick right callback");
-    struct Position new_position = {.x = 0, .y = 1};
-    move_to(new_position);
+	struct Position new_position = {.x = 0, .y = 1};
+	move_to(new_position);
 }
 
 void joystick_center_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-    load_map();
-    display_map();
+	load_map();
+	display_map();
 	LOG_INF("joystick center callback");
 }
 
@@ -272,14 +276,12 @@ static int setup_button(const struct gpio_dt_spec *btn, struct gpio_callback *cb
 			return -1;
 		}
 	}
-    /* set callbacks */
+	/* set callbacks */
 	gpio_init_callback(cb, handler, BIT(btn->pin));
 	gpio_add_callback(btn->port, cb);
 
 	return 0;
 }
-
-
 
 /* function to initialise the  hardware */
 static int init_hw(void)
@@ -325,10 +327,9 @@ int main(void)
 		LOG_ERR("failed to init hw");
 	}
 
-    rc = load_map();
+	rc = load_map();
 
 	rc = display_map();
-
 
 	return 0;
 }
