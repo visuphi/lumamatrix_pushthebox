@@ -7,39 +7,19 @@
 LOG_MODULE_REGISTER(main);
 
 #include <zephyr/kernel.h>
-#include <zephyr/drivers/led_strip.h>
-#include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/util.h>
 
 #include <map.h>
 #include <buttons.h>
 
-#define STRIP_NODE DT_ALIAS(led_strip)
-
-#if DT_NODE_HAS_PROP(DT_ALIAS(led_strip), chain_length)
-#define STRIP_NUM_PIXELS DT_PROP(DT_ALIAS(led_strip), chain_length)
-#else
-#error Unable to determine length of LED strip
-#endif
 
 #define DELAY_TIME K_MSEC(CONFIG_SAMPLE_LED_UPDATE_DELAY)
 
 #define RGB(_r, _g, _b) {.r = (_r), .g = (_g), .b = (_b)}
 
-#define NOTHING       0
-#define BORDER        1
-#define BOX           2
-#define TARGET        3
-#define BOX_ON_TARGET 4
 
-static const struct led_rgb field_colors[] = {
-	RGB(0, 0, 0),       /* empty */
-	RGB(100, 100, 100), /* border */
-	RGB(128, 0, 128),   /* BOX */
-	RGB(0, 128, 128),   /* TARGET */
-	RGB(0, 128, 0),     /* BOX_ON_TARGET */
-};
+
 
 uint8_t map[8][8] = {{1, 1, 1, 1, 1, 0, 0, 0}, 
                     {1, 0, 2, 3, 1, 1, 1, 0},
@@ -51,201 +31,79 @@ uint8_t map[8][8] = {{1, 1, 1, 1, 1, 0, 0, 0},
                     {0, 1, 1, 1, 1, 0, 0, 0}};
 
 struct Position start = {.x = 2, .y = 2};
-struct led_rgb player_color = RGB(255, 0, 0);
-
-uint8_t game_state[8][8];
-struct Position player;
-
-static const struct led_rgb colors[] = {
-	RGB(CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00, 0x00), /* red */
-	RGB(0x00, CONFIG_SAMPLE_LED_BRIGHTNESS, 0x00), /* green */
-	RGB(0x00, 0x00, CONFIG_SAMPLE_LED_BRIGHTNESS), /* blue */
-};
-
-static struct led_rgb pixels[STRIP_NUM_PIXELS];
-
-static const struct device *const strip = DEVICE_DT_GET(STRIP_NODE);
-
-static int display_map(void)
-{
-	int rc;
-	size_t map_len_y = sizeof(game_state[0]) / sizeof(game_state[0][0]);
-	size_t map_len_x = sizeof(game_state) / sizeof(game_state[0]);
-	int x, y;
-	int index, element;
-	for (y = 0; y < map_len_y; y++) {
-		for (x = 0; x < map_len_x; x++) {
-			index = map_pos_to_index(y, x);
-			element = game_state[y][x];
-			pixels[index] = field_colors[element];
-		}
-	}
-
-	index = map_pos_to_index(player.x, player.y);
-	pixels[index] = player_color;
-
-	rc = led_strip_update_rgb(strip, pixels, STRIP_NUM_PIXELS);
-	if (rc) {
-		LOG_ERR("couldn't update strip: %d", rc);
-	}
-	return 0;
-}
-
-static int display_win(void)
-{
-	int rc;
-	size_t map_len_y = sizeof(game_state[0]) / sizeof(game_state[0][0]);
-	size_t map_len_x = sizeof(game_state) / sizeof(game_state[0]);
-	int x, y;
-	int index;
-	for (y = 0; y < map_len_y; y++) {
-		for (x = 0; x < map_len_x; x++) {
-			index = map_pos_to_index(y, x);
-			pixels[index] = colors[1];
-		}
-	}
-
-	rc = led_strip_update_rgb(strip, pixels, STRIP_NUM_PIXELS);
-	if (rc) {
-		LOG_ERR("couldn't update strip: %d", rc);
-	}
-	return 0;
-}
-
-static int load_map(void)
-{
-	memcpy(game_state, map, sizeof(map));
-	player = start;
-	return 0;
-}
-
-bool check_success(void)
-{
-	size_t map_len_y = sizeof(game_state[0]) / sizeof(game_state[0][0]);
-	size_t map_len_x = sizeof(game_state) / sizeof(game_state[0]);
-	int x, y;
-	for (y = 0; y < map_len_y; y++) {
-		for (x = 0; x < map_len_x; x++) {
-			if (game_state[y][x] == BOX) {
-				return false;
-			}
-		}
-	}
-	return true;
-}
-
-void move_to(struct Position rel_pos)
-{
-	int new_x = player.x + rel_pos.x;
-	int new_y = player.y + rel_pos.y;
-
-	switch (game_state[new_x][new_y]) {
-	case BORDER:
-		break;
-	case BOX_ON_TARGET:
-		switch (game_state[new_x + rel_pos.x][new_y + rel_pos.y]) {
-		case BORDER:        // intentional fallthrough
-		case BOX_ON_TARGET: // intentional fallthrough
-		case BOX:
-			break;
-		case NOTHING:
-			game_state[new_x][new_y] = TARGET;
-			game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX;
-			player.x = new_x;
-			player.y = new_y;
-			break;
-		case TARGET:
-			game_state[new_x][new_y] = TARGET;
-			game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX_ON_TARGET;
-			player.x = new_x;
-			player.y = new_y;
-			break;
-		}
-		break;
-	case BOX:
-		switch (game_state[new_x + rel_pos.x][new_y + rel_pos.y]) {
-		case BORDER:        // intentional fallthrough
-		case BOX_ON_TARGET: // intentional fallthrough
-		case BOX:
-			break;
-		case NOTHING:
-			game_state[new_x][new_y] = NOTHING;
-			game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX;
-			player.x = new_x;
-			player.y = new_y;
-			break;
-		case TARGET:
-			game_state[new_x][new_y] = NOTHING;
-			game_state[new_x + rel_pos.x][new_y + rel_pos.y] = BOX_ON_TARGET;
-			player.x = new_x;
-			player.y = new_y;
-			break;
-		}
-		break;
-	case TARGET: // intentional fallthrough
-	default:     // intentional fallthrough
-	case NOTHING:
-		player.x = new_x;
-		player.y = new_y;
-		break;
-	}
-
-	if (check_success()) {
-		display_win();
-	} else {
-		display_map();
-	}
-}
 
 /* callbacks which are called when joystick is used */
 void joystick_up_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	LOG_INF("joystick up callback");
+	int rc;
+	
 	struct Position new_position = {.x = -1, .y = 0};
-	move_to(new_position);
+	rc = move_to(new_position);
+	if (rc) {
+		LOG_ERR("failed to move player");
+	}
 }
 
 void joystick_down_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	LOG_INF("joystick down callback");
+	int rc;
+
 	struct Position new_position = {.x = 1, .y = 0};
-	move_to(new_position);
+	rc = move_to(new_position);
+	if (rc) {
+		LOG_ERR("failed to move player");
+	}
 }
 
 void joystick_left_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	LOG_INF("joystick left callback");
+	int rc;
+
 	struct Position new_position = {.x = 0, .y = -1};
-	move_to(new_position);
+	rc = move_to(new_position);
+	if (rc) {
+		LOG_ERR("failed to move player");
+	}
 }
 
 void joystick_right_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	LOG_INF("joystick right callback");
+	int rc;
+
 	struct Position new_position = {.x = 0, .y = 1};
-	move_to(new_position);
+	rc = move_to(new_position);
+	if (rc) {
+		LOG_ERR("failed to move player");
+	}
 }
 
 void joystick_center_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-	load_map();
-	display_map();
 	LOG_INF("joystick center callback");
+	int rc;
+
+	rc = load_map(map, start);
+	if (rc) {
+		LOG_ERR("failed to load map");
+	}
 }
 
 /* HARDWARE INIT */
 static int init_hw(void)
 {
-	if (device_is_ready(strip)) {
-		LOG_INF("Found LED strip device %s", strip->name);
-	} else {
-		LOG_ERR("LED strip device %s is not ready", strip->name);
-		return -1;
+	int rc;
+
+	rc = init_map();
+	if (rc) {
+		LOG_ERR("failed to init map");
 	}
 
-	int rc = init_buttons(joystick_up_pressed, joystick_down_pressed, joystick_left_pressed,
+	rc = init_buttons(joystick_up_pressed, joystick_down_pressed, joystick_left_pressed,
 			      joystick_right_pressed, joystick_center_pressed);
-
 	if (rc) {
 		LOG_ERR("failed to init buttons: %d", rc);
 		return rc;
@@ -256,22 +114,16 @@ static int init_hw(void)
 
 int main(void)
 {
-
 	int rc;
 
 	rc = init_hw();
-	if (!rc) {
+	if (rc) {
 		LOG_ERR("failed to init hw");
 	}
 
-	rc = load_map();
-	if (!rc) {
+	rc = load_map(map, start);
+	if (rc) {
 		LOG_ERR("failed to load map");
-	}
-
-	rc = display_map();
-	if (!rc) {
-		LOG_ERR("failed to display map");
 	}
 	return 0;
 }
