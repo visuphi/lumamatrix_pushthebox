@@ -6,12 +6,13 @@ To win, the player must move the purple boxes into the blue target areas.
 
 ## Requirements
 
-- Zepyhr 4.3.0
+- Zepyhr 4.4.0
+- Zephyr SDK 1.0.1
 - Luma Matrix Shield and Raspberry Pi Pico
 
 ## build
 
-```
+```text
 west build -b rpi_pico --shield zhaw_lumamatrix
 ```
 
@@ -20,11 +21,12 @@ west build -b rpi_pico --shield zhaw_lumamatrix
 - If the Pico is powered on with the `BOOTSEL` button pressed, it will appear on the host as a mass storage device.
 
 run
-```
+
+```text
 west flash --runner uf2
 ```
 
-# Links
+## Links
 
 [Lumatrix Workshop ZHAW](http://www.lumatrix.fun) <br>
 [Lumatrix Github Repository](https://github.com/InES-HPMM/LED-Matrix-Workshop) <br>
